@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Real-Time Travel ETA</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f2f2f2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .box {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #ccc;
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px 0;
+            width: 100%;
+        }
+        h2 {
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>Live Travel ETA - Bangalore</h2>
+        <form method="POST">
+            <label>Source Latitude:</label>
+            <input type="text" name="source_lat" required>
+            <label>Source Longitude:</label>
+            <input type="text" name="source_lon" required>
+            <label>Destination Latitude:</label>
+            <input type="text" name="dest_lat" required>
+            <label>Destination Longitude:</label>
+            <input type="text" name="dest_lon" required>
+            <button type="submit">Get ETA</button>
+        </form>
+        {% if prediction %}
+            <h3>Estimated Time: {{ prediction }}</h3>
+        {% endif %}
+    </div>
+</body>
+</html>
