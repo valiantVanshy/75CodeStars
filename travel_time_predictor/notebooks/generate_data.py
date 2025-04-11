@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import os
 import time
 
-API_KEY = "GmdIGSwG6ER0QVA4JRgWtyl4sD5aJbGd"  # ⬅️ Replace with your new key
+API_KEY = "GmdIGSwG6ER0QVA4JRgWtyl4sD5aJbGd"
 OUTPUT_FILE = "data/simulated_travel_data.csv"
 
 # 50 locations in Bangalore
@@ -98,8 +98,24 @@ try:
         random_day = datetime.now() - timedelta(days=day_offset)
         departure = random_day.replace(hour=random_hour, minute=random_minute, second=0, microsecond=0)
 
+        time_str = departure.strftime("%Y-%m-%d %H:%M:%S")
+        day_of_week = departure.strftime("%A")
+
+        # Check for duplicates
+        is_duplicate = (
+            (df["home"] == home["name"]) &
+            (df["office"] == office["name"]) &
+            (df["day_of_week"] == day_of_week) &
+            (df["time"] == time_str)
+        ).any()
+
+        if is_duplicate:
+            print(f"⚠️ Duplicate found: {home['name']} ➡ {office['name']} at {time_str}. Skipping.")
+            continue
+
         try:
             duration = get_eta(home["latitude"], home["longitude"], office["latitude"], office["longitude"], departure)
+
             df = pd.concat([df, pd.DataFrame([{
                 "home": home["name"],
                 "office": office["name"],
@@ -107,16 +123,17 @@ try:
                 "home_lon": home["longitude"],
                 "office_lat": office["latitude"],
                 "office_lon": office["longitude"],
-                "day_of_week": departure.strftime("%A"),
-                "time": departure.strftime("%Y-%m-%d %H:%M:%S"),
+                "day_of_week": day_of_week,
+                "time": time_str,
                 "duration_mins": duration
             }])], ignore_index=True)
+
             api_call_count += 1
-            print(f"✅ {api_call_count}. {home['name']} ➡ {office['name']} at {departure.strftime('%Y-%m-%d %H:%M')} = {round(duration, 2)} mins")
+            print(f"✅ {api_call_count}. {home['name']} ➡ {office['name']} at {time_str} = {round(duration, 2)} mins")
             time.sleep(0.8)
 
         except Exception as e:
-            print(e)
+            print(f"❌ API failed: {e}")
 
 finally:
     df.to_csv(OUTPUT_FILE, index=False)

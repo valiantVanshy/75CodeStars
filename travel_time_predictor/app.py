@@ -1,38 +1,46 @@
 from flask import Flask, render_template, request
-import requests
-from datetime import datetime
+import pandas as pd
+import joblib
+import datetime
 
 app = Flask(__name__)
-TOMTOM_API_KEY = "fq1a0usQt7qLbvM8Vwu3myhsFfNrEF5A"
+
+# ✅ Load location data and model
+locations_df = pd.read_csv("data/bangalore_locations.csv")  # Columns: name, lat, lon
+location_names = sorted(locations_df["name"].unique())
+model = joblib.load("models/xgb_model.joblib")
 
 @app.route("/", methods=["GET", "POST"])
-def home():
+def index():
     prediction = None
+
     if request.method == "POST":
-        source_lat = request.form["source_lat"]
-        source_lon = request.form["source_lon"]
-        dest_lat = request.form["dest_lat"]
-        dest_lon = request.form["dest_lon"]
+        source = request.form["source"]
+        destination = request.form["destination"]
 
-        url = (
-            f"https://api.tomtom.com/routing/1/calculateRoute/"
-            f"{source_lat},{source_lon}:{dest_lat},{dest_lon}/json"
-            f"?key={TOMTOM_API_KEY}&traffic=true"
-        )
-
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("routes"):
-                eta_seconds = data["routes"][0]["summary"]["travelTimeInSeconds"]
-                eta_minutes = round(eta_seconds / 60, 2)
-                prediction = f"{eta_minutes} minutes"
-            else:
-                prediction = "No route found!"
+        if source == destination:
+            prediction = "Source and destination are the same. ETA is 0 minutes."
         else:
-            prediction = "Error fetching route from TomTom."
+            # 🔍 Lookup coordinates
+            source_row = locations_df[locations_df["name"] == source].iloc[0]
+            dest_row = locations_df[locations_df["name"] == destination].iloc[0]
 
-    return render_template("index.html", prediction=prediction)
+            start_lat = source_row["lat"]
+            start_lon = source_row["lon"]
+            end_lat = dest_row["lat"]
+            end_lon = dest_row["lon"]
+
+            # 🕒 Get time info
+            now = datetime.datetime.now()
+            day_of_week = now.weekday()
+            hour = now.hour
+
+            # 📊 Predict with model
+            features = [[start_lat, start_lon, end_lat, end_lon, day_of_week, hour]]
+            duration = model.predict(features)[0]
+            prediction = f"Estimated Travel Time from {source} to {destination} = {round(duration)} minutes"
+
+    return render_template("index.html", locations=location_names, prediction=prediction)
 
 if __name__ == "__main__":
     app.run(debug=True)

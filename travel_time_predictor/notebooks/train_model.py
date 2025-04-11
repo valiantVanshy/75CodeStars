@@ -4,6 +4,7 @@ import joblib
 from xgboost import XGBRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
+import numpy as np
 
 # 📥 Load dataset
 data_path = "data/simulated_travel_data.csv"
@@ -31,8 +32,17 @@ if df["day_of_week"].dtype == object:
     }
     df["day_of_week"] = df["day_of_week"].map(day_map)
 
+# 🚫 Remove rows with missing or invalid target values
+# ⚠️ Keep only rows with valid duration values
+initial_count = len(df)
+df = df[df["duration_minutes"].notna() & np.isfinite(df["duration_minutes"]) & (df["duration_minutes"] > 0)]
+final_count = len(df)
+print(f"📉 Removed {initial_count - final_count} bad rows. Using {final_count} rows for training.")
+
+
 # 🧾 Print column types
-print("📊 Column types after conversion:\n", df.dtypes)
+print("📊 Column types after cleaning:\n", df.dtypes)
+print("✅ Final row count after cleaning:", len(df))
 
 # 🎯 Features and target
 X = df[["start_lat", "start_lng", "end_lat", "end_lng", "day_of_week", "hour_of_day"]]
