@@ -33,12 +33,9 @@ if df["day_of_week"].dtype == object:
     df["day_of_week"] = df["day_of_week"].map(day_map)
 
 # 🚫 Remove rows with missing or invalid target values
-# ⚠️ Keep only rows with valid duration values
-initial_count = len(df)
-df = df[df["duration_minutes"].notna() & np.isfinite(df["duration_minutes"]) & (df["duration_minutes"] > 0)]
-final_count = len(df)
-print(f"📉 Removed {initial_count - final_count} bad rows. Using {final_count} rows for training.")
-
+df = df[pd.notnull(df["duration_mins"])]
+df = df[np.isfinite(df["duration_mins"])]
+df = df[df["duration_mins"] < 1e5]
 
 # 🧾 Print column types
 print("📊 Column types after cleaning:\n", df.dtypes)
@@ -46,7 +43,7 @@ print("✅ Final row count after cleaning:", len(df))
 
 # 🎯 Features and target
 X = df[["start_lat", "start_lng", "end_lat", "end_lng", "day_of_week", "hour_of_day"]]
-y = df["duration_minutes"]
+y = df["duration_mins"]
 
 # 🧪 Split data
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)

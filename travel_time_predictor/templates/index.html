@@ -1,68 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Real-Time Travel ETA</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #f2f2f2;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        .box {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px #ccc;
-        }
-        select, button {
-            padding: 10px;
-            margin: 5px 0;
-            width: 100%;
-        }
-        h2 {
-            color: #2c3e50;
-        }
-    </style>
+    <title>Travel Time Predictor</title>
 </head>
 <body>
-    <div class="box">
-        <h2>Live Travel ETA - Bangalore</h2>
-        <form method="POST">
-            <label for="source">Source Location:</label>
-            <select name="source" required>
-                {% for name in locations %}
-                    <option value="{{ name }}">{{ name }}</option>
-                {% endfor %}
-            </select>
-            <label for="travel_time">Travel Time:</label>
-<input type="time" name="travel_time" required>
+    <h2>Predict Travel Time</h2>
+    <form method="POST">
+        <label for="home">Home Location:</label><br>
+        <input type="text" name="home" required><br><br>
 
-<label for="travel_day">Day of Week:</label>
-<select name="travel_day" required>
-    <option value="0">Monday</option>
-    <option value="1">Tuesday</option>
-    <option value="2">Wednesday</option>
-    <option value="3">Thursday</option>
-    <option value="4">Friday</option>
-    <option value="5">Saturday</option>
-    <option value="6">Sunday</option>
-</select>
+        <label for="office">Office Location:</label><br>
+        <input type="text" name="office" required><br><br>
 
-            <label for="destination">Destination Location:</label>
-            <select name="destination" required>
-                {% for name in locations %}
-                    <option value="{{ name }}">{{ name }}</option>
-                {% endfor %}
-            </select>
+        <label for="time">Start Time (HH:MM):</label><br>
+        <input type="text" name="time" placeholder="e.g. 08:30" required><br><br>
 
-            <button type="submit">Get ETA</button>
-        </form>
-        {% if prediction %}
-            <h3>Estimated Time: {{ prediction }}</h3>
-        {% endif %}
-    </div>
+        <button type="submit">Predict</button>
+    </form>
+
+    {% if prediction %}
+        <h3>Predicted Travel Time: {{ prediction }} minutes</h3>
+    {% endif %}
+
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+<h6>Accuracy of upto 98.26%</h6>
 </body>
 </html>

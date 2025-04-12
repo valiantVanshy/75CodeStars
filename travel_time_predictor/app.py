@@ -1,46 +1,70 @@
 from flask import Flask, render_template, request
-import pandas as pd
 import joblib
-import datetime
+import pandas as pd
+from datetime import datetime
+import requests
+import os
 
 app = Flask(__name__)
 
-# ✅ Load location data and model
-locations_df = pd.read_csv("data/bangalore_locations.csv")  # Columns: name, lat, lon
-location_names = sorted(locations_df["name"].unique())
+# Load the trained model
 model = joblib.load("models/xgb_model.joblib")
+
+# TomTom API key
+TOMTOM_API_KEY = "fq1a0usQt7qLbvM8Vwu3myhsFfNrEF5A"
+
+def get_coordinates_from_location(location_name):
+    url = f"https://api.tomtom.com/search/2/geocode/{location_name}.json?key={TOMTOM_API_KEY}"
+    response = requests.get(url)
+    data = response.json()
+    if data["results"]:
+        position = data["results"][0]["position"]
+        return position["lat"], position["lon"]
+    else:
+        return None, None
+
+def get_day_hour_from_input(time_str):
+    try:
+        dt = datetime.strptime(time_str, "%H:%M")
+        return datetime.today().weekday(), dt.hour
+    except ValueError:
+        return None, None
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    prediction = None
-
     if request.method == "POST":
-        source = request.form["source"]
-        destination = request.form["destination"]
+        home = request.form["home"]
+        office = request.form["office"]
+        time_input = request.form["time"]
 
-        if source == destination:
-            prediction = "Source and destination are the same. ETA is 0 minutes."
-        else:
-            # 🔍 Lookup coordinates
-            source_row = locations_df[locations_df["name"] == source].iloc[0]
-            dest_row = locations_df[locations_df["name"] == destination].iloc[0]
+        # Get lat/lon
+        home_lat, home_lon = get_coordinates_from_location(home)
+        office_lat, office_lon = get_coordinates_from_location(office)
 
-            start_lat = source_row["lat"]
-            start_lon = source_row["lon"]
-            end_lat = dest_row["lat"]
-            end_lon = dest_row["lon"]
+        if None in [home_lat, home_lon, office_lat, office_lon]:
+            return render_template("index.html", error="Invalid home or office location entered.")
 
-            # 🕒 Get time info
-            now = datetime.datetime.now()
-            day_of_week = now.weekday()
-            hour = now.hour
+        # Get time features
+        day_of_week, hour_of_day = get_day_hour_from_input(time_input)
+        if day_of_week is None:
+            return render_template("index.html", error="Invalid time format. Please use HH:MM.")
 
-            # 📊 Predict with model
-            features = [[start_lat, start_lon, end_lat, end_lon, day_of_week, hour]]
-            duration = model.predict(features)[0]
-            prediction = f"Estimated Travel Time from {source} to {destination} = {round(duration)} minutes"
+        # Predict
+        input_df = pd.DataFrame([{
+            "start_lat": home_lat,
+            "start_lng": home_lon,
+            "end_lat": office_lat,
+            "end_lng": office_lon,
+            "day_of_week": day_of_week,
+            "hour_of_day": hour_of_day
+        }])
 
-    return render_template("index.html", locations=location_names, prediction=prediction)
+        predicted_duration = model.predict(input_df)[0]
+        predicted_duration = round(predicted_duration, 2)
+
+        return render_template("index.html", prediction=predicted_duration)
+
+    return render_template("index.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
