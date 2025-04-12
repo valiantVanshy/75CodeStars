@@ -3,6 +3,55 @@ import joblib
 import streamlit as st
 from datetime import datetime
 import math
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import r2_score, mean_absolute_error
+
+# Load the processed dataset
+df = pd.read_csv("simulated_travel_logs.csv")
+
+# Extract hour from time_of_day
+df["hour"] = df["time_of_day"].apply(lambda x: int(x.split(":")[0]))
+
+# Encode trip_type as binary
+df["trip_type_encoded"] = df["trip_type"].apply(lambda x: 1 if x == "Home to Office" else 0)
+
+# One-hot encode the day_of_week
+df = pd.get_dummies(df, columns=["day_of_week"], drop_first=True)
+
+# Define features and target
+feature_cols = ["distance_km", "hour", "trip_type_encoded"] + [col for col in df.columns if col.startswith("day_of_week_")]
+X = df[feature_cols]
+y = df["ETA_min"]
+
+# Split the data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train the model
+model = RandomForestRegressor(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Predict
+y_pred = model.predict(X_test)
+
+# Evaluate
+r2 = r2_score(y_test, y_pred)
+mae = mean_absolute_error(y_test, y_pred)
+
+print(f"\n🎯 R² Score: {r2:.4f}")
+print(f"⏱️ Mean Absolute Error: {mae:.2f} minutes")
+
+import joblib
+
+# Save model
+joblib.dump(model, "eta_predictor_model.pkl")
+
+# Save feature columns (to keep input order same in Streamlit)
+joblib.dump(feature_cols, "feature_columns.pkl")
+
+print("✅ Model & feature list saved!")
+
+
 
 # --- Load Trained Model ---
 model = joblib.load("eta_predictor_model.pkl")
